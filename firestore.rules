@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 3. Primitive Definitions
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        request.auth.token.email == 'aquinoaileen305@gmail.com' || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      ); 
+    }
+
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.uid == request.auth.uid 
+          && data.email is string && data.email.size() <= 256
+          && data.displayName is string && data.displayName.size() <= 128
+          && (data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1024))
+          && (data.coverURL == null || (data.coverURL is string && data.coverURL.size() <= 1024))
+          && (data.bio == null || (data.bio is string && data.bio.size() <= 500))
+          && data.followingCount is number
+          && data.followersCount is number
+          && data.isAdmin is bool;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming()) 
+                      && incoming().isAdmin == (request.auth.token.email == 'aquinoaileen305@gmail.com');
+      allow update: if (isOwner(userId) || isAdmin()) 
+                      && isValidUser(incoming())
+                      && (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'coverURL', 'bio', 'followingCount', 'followersCount']));
+    }
+
+    // --- Posts ---
+    match /posts/{postId} {
+      function isValidPost(data) {
+        return data.authorId == request.auth.uid
+          && data.authorName is string && data.authorName.size() <= 128
+          && data.content is string && data.content.size() <= 5000
+          && (data.imageURL == null || (data.imageURL is string && data.imageURL.size() <= 1024))
+          && data.upvotes is list && data.upvotes.size() <= 10000
+          && data.downvotes is list && data.downvotes.size() <= 10000
+          && data.createdAt == request.time;
+      }
+
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidPost(incoming()) && isValidId(postId);
+      allow update: if isSignedIn() && (
+        (isOwner(existing().authorId) && isValidPost(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'imageURL'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'downvotes'])) // Voting action
+        || isAdmin()
+      );
+      allow delete: if isOwner(existing().authorId) || isAdmin();
+    }
+
+    // --- Comments ---
+    match /posts/{postId}/comments/{commentId} {
+      function isValidComment(data) {
+        return data.authorId == request.auth.uid
+          && data.postId == postId
+          && data.content is string && data.content.size() <= 1000
+          && data.createdAt == request.time;
+      }
+
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidComment(incoming()) && exists(/databases/$(database)/documents/posts/$(postId));
+      allow update: if (isOwner(existing().authorId) && isValidComment(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['content'])) || isAdmin();
+      allow delete: if isOwner(existing().authorId) || isAdmin();
+    }
+
+    // --- Chats ---
+    match /chats/{chatId} {
+      function isParticipant() {
+        return isSignedIn() && request.auth.uid in existing().participants;
+      }
+      
+      allow read: if isParticipant();
+      allow create: if isSignedIn() && incoming().participants.size() >= 1 && request.auth.uid in incoming().participants;
+      allow update: if isParticipant() || isAdmin();
+    }
+
+    // --- Messages ---
+    match /chats/{chatId}/messages/{messageId} {
+      function isChatParticipant() {
+        return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+
+      allow read: if isChatParticipant();
+      allow create: if isChatParticipant() 
+                      && incoming().senderId == request.auth.uid 
+                      && incoming().chatId == chatId
+                      && incoming().createdAt == request.time;
+    }
+
+    // --- Follows ---
+    match /follows/{followId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(incoming().followerId);
+      allow delete: if isOwner(existing().followerId);
+    }
+  }
+}

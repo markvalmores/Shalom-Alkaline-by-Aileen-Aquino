@@ -1,0 +1,6 @@
+{
+  "name": "Shalom Alkaline Water Purifier",
+  "description": "Premium alkaline water purifier with a real-time community, messenger, and secure user management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

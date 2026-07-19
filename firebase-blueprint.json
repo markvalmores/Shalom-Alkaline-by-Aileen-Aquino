@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "coverURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "followingCount": { "type": "number" },
+        "followersCount": { "type": "number" },
+        "isAdmin": { "type": "boolean" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Community post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "imageURL": { "type": "string" },
+        "upvotes": { "type": "number" },
+        "downvotes": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "authorId", "content", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "Post comment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "postId", "authorId", "content", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Group or direct chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "participants": { "type": "array" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "participants", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "chatId", "senderId", "text", "createdAt"]
+    },
+    "Follow": {
+      "title": "Follow",
+      "description": "User follow relationship",
+      "type": "object",
+      "properties": {
+        "followerId": { "type": "string" },
+        "followingId": { "type": "string" }
+      },
+      "required": ["followerId", "followingId"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles" },
+    "/posts/{postId}": { "schema": "Post", "description": "Community posts" },
+    "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on posts" },
+    "/chats/{chatId}": { "schema": "Chat", "description": "Chat groups" },
+    "/chats/{chatId}/messages/{messageId}": { "schema": "Message", "description": "Messages in chats" },
+    "/follows/{followId}": { "schema": "Follow", "description": "Follow relationships" }
+  }
+}

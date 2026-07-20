@@ -51,6 +51,8 @@ export default function Shop() {
       } as Order));
       setOrders(fetchedOrders);
       setLoadingOrders(false);
+    }, (error) => {
+      console.error('Order query error:', error);
     });
 
     return () => unsubscribe();
@@ -71,6 +73,8 @@ export default function Shop() {
         ...doc.data()
       } as Order));
       setAllOrders(fetchedAll);
+    }, (error) => {
+      console.error('All Orders query error:', error);
     });
 
     return () => unsubscribe();

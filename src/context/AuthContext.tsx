@@ -26,9 +26,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (docSnap.exists()) {
             setUser(docSnap.data() as User);
           } else {
-            // User exists in Auth but not in Firestore yet (e.g., just signed up)
-            // We'll handle profile creation in the signup flow
-            setUser(null);
+            // Profile doesn't exist yet - keep user as null, but don't set loading to false?
+            // Actually, if firebaseUser exists, they ARE authenticated.
+            // Let's create a minimal user object if it doesn't exist.
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email || '',
+              displayName: firebaseUser.displayName || 'New User',
+              photoURL: firebaseUser.photoURL || '',
+              bio: '',
+              followingCount: 0,
+              followersCount: 0,
+              isAdmin: false,
+              createdAt: new Date(),
+              coverURL: ''
+            });
           }
           setLoading(false);
         });

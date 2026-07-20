@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import Splash from './components/Splash';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -9,6 +10,7 @@ import Messenger from './components/Messenger';
 import Community from './components/Community';
 import Profile from './components/Profile';
 import Navbar from './components/Navbar';
+import Shop from './components/Shop';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -62,6 +64,14 @@ function AppRoutes() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/shop" 
+            element={
+              <ProtectedRoute>
+                <Shop />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </main>
       {user && <Footer />}
@@ -72,9 +82,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
+      <CartProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

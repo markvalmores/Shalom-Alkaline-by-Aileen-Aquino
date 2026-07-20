@@ -84,6 +84,27 @@
         "followingId": { "type": "string" }
       },
       "required": ["followerId", "followingId"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "User product orders and shipping details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "displayName": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "gcashReference": { "type": "string" },
+        "shippingAddress": { "type": "string" },
+        "shippingCity": { "type": "string" },
+        "shippingZip": { "type": "string" },
+        "shippingPhone": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "items", "totalAmount", "gcashReference", "shippingAddress", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -92,6 +113,7 @@
     "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on posts" },
     "/chats/{chatId}": { "schema": "Chat", "description": "Chat groups" },
     "/chats/{chatId}/messages/{messageId}": { "schema": "Message", "description": "Messages in chats" },
-    "/follows/{followId}": { "schema": "Follow", "description": "Follow relationships" }
+    "/follows/{followId}": { "schema": "Follow", "description": "Follow relationships" },
+    "/orders/{orderId}": { "schema": "Order", "description": "User product orders" }
   }
 }

@@ -110,5 +110,23 @@ service cloud.firestore {
       allow create: if isOwner(incoming().followerId);
       allow delete: if isOwner(existing().followerId);
     }
+
+    // --- Orders ---
+    match /orders/{orderId} {
+      function isValidOrder(data) {
+        return data.userId == request.auth.uid
+          && data.items is list
+          && data.totalAmount is number
+          && data.gcashReference is string && data.gcashReference.size() <= 128
+          && data.shippingAddress is string && data.shippingAddress.size() <= 1024
+          && data.status is string
+          && data.createdAt == request.time;
+      }
+
+      allow read: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      allow create: if isSignedIn() && isValidOrder(incoming()) && isValidId(orderId);
+      allow update: if isSignedIn() && (isAdmin() || (isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['shippingAddress', 'shippingCity', 'shippingZip', 'shippingPhone', 'gcashReference'])));
+      allow delete: if isAdmin();
+    }
   }
 }

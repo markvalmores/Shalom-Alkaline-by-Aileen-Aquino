@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Chat, Message, User } from '../types';
@@ -191,7 +191,3 @@ export default function Messenger() {
     </div>
   );
 }
-
-// Missing import fix
-import { updateDoc as firestoreUpdateDoc } from 'firebase/firestore';
-const updateDoc = firestoreUpdateDoc;

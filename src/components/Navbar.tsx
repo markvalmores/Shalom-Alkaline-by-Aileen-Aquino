@@ -1,10 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { auth } from '../lib/firebase';
-import { LogOut, User, MessageCircle, Users, Globe, Search, Bell } from 'lucide-react';
+import { LogOut, User, MessageCircle, Users, Globe, Search, Bell, ShoppingBag } from 'lucide-react';
 
 export default function Navbar() {
   const { user } = useAuth();
+  const { cartCount } = useCart();
   const navigate = useNavigate();
 
   const handleSignOut = () => {
@@ -35,6 +37,14 @@ export default function Navbar() {
           </Link>
           <Link to="/messenger" className="p-2 hover:bg-tea-green/20 rounded-full text-slate-600 transition-colors" title="Messenger">
             <MessageCircle className="w-6 h-6" />
+          </Link>
+          <Link to="/shop" className="p-2 hover:bg-tea-green/20 rounded-full text-slate-600 transition-colors relative" title="Shop & Orders">
+            <ShoppingBag className="w-6 h-6" />
+            {cartCount > 0 && (
+              <span className="absolute top-0 right-0 bg-violet-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-black">
+                {cartCount}
+              </span>
+            )}
           </Link>
           <button className="p-2 hover:bg-tea-green/20 rounded-full text-slate-600 transition-colors" title="Notifications">
             <Bell className="w-6 h-6" />

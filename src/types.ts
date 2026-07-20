@@ -52,3 +52,40 @@ export interface Follow {
   followerId: string;
   followingId: string;
 }
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  imageURL: string;
+  pH: string;
+  capacity: string;
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  userEmail: string;
+  displayName: string;
+  items: {
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    imageURL: string;
+  }[];
+  totalAmount: number;
+  gcashReference: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingZip: string;
+  shippingPhone: string;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  createdAt: any;
+}

@@ -5,6 +5,7 @@ import { CartProvider } from './context/CartContext';
 import Splash from './components/Splash';
 import Login from './components/Login';
 import Register from './components/Register';
+import ForgotPassword from './components/ForgotPassword';
 import Dashboard from './components/Dashboard';
 import Messenger from './components/Messenger';
 import Community from './components/Community';
@@ -32,6 +33,7 @@ function AppRoutes() {
           <Route path="/" element={<Splash />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route 
             path="/dashboard" 
             element={

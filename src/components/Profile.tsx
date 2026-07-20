@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, query, where, orderBy, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { User, Post as PostType } from '../types';
 import { PostItem } from './PostItem';
-import { motion } from 'framer-motion';
-import { UserPlus, UserMinus, Calendar, Mail, ShieldCheck, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UserPlus, UserMinus, Calendar, Mail, ShieldCheck, MapPin, X, Key, Save, Edit } from 'lucide-react';
 
 export default function Profile() {
   const { uid } = useParams();
@@ -15,6 +16,76 @@ export default function Profile() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Edit Profile States
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editPhotoURL, setEditPhotoURL] = useState('');
+  const [editCoverURL, setEditCoverURL] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [updateError, setUpdateError] = useState('');
+  const [updateSuccess, setUpdateSuccess] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resetEmailError, setResetEmailError] = useState('');
+  const [sendingReset, setSendingReset] = useState(false);
+
+  // Initialize edit fields when profile loads
+  useEffect(() => {
+    if (profile) {
+      setEditDisplayName(profile.displayName || '');
+      setEditBio(profile.bio || '');
+      setEditPhotoURL(profile.photoURL || '');
+      setEditCoverURL(profile.coverURL || '');
+    }
+  }, [profile]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uid || !currentUser) return;
+    if (currentUser.uid !== uid) return;
+
+    setIsSaving(true);
+    setUpdateError('');
+    setUpdateSuccess('');
+
+    try {
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, {
+        displayName: editDisplayName.trim(),
+        bio: editBio.trim(),
+        photoURL: editPhotoURL.trim(),
+        coverURL: editCoverURL.trim(),
+      });
+      setUpdateSuccess('Profile updated successfully!');
+      setTimeout(() => {
+        setIsEditing(false);
+        setUpdateSuccess('');
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      setUpdateError(err.message || 'Failed to update profile.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSendResetEmail = async () => {
+    if (!profile?.email) return;
+    setSendingReset(true);
+    setResetEmailSent(false);
+    setResetEmailError('');
+
+    try {
+      await sendPasswordResetEmail(auth, profile.email);
+      setResetEmailSent(true);
+    } catch (err: any) {
+      console.error('Error sending reset email:', err);
+      setResetEmailError(err.message || 'Failed to send reset email.');
+    } finally {
+      setSendingReset(false);
+    }
+  };
 
   useEffect(() => {
     if (!uid) return;
@@ -87,8 +158,11 @@ export default function Profile() {
                 </button>
               )}
               {currentUser?.uid === uid && (
-                <button className="px-6 py-2 bg-tea-green text-dark-tea font-bold rounded-2xl border-2 border-dark-tea/20 hover:bg-dark-tea hover:text-white transition-all">
-                  Edit Profile
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="px-6 py-2 bg-tea-green text-dark-tea font-bold rounded-2xl border-2 border-dark-tea/20 hover:bg-dark-tea hover:text-white transition-all flex items-center gap-1.5"
+                >
+                  <Edit className="w-4 h-4" /> Edit Profile
                 </button>
               )}
             </div>
@@ -165,6 +239,132 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile & Password Reset Modal */}
+      <AnimatePresence>
+        {isEditing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden my-8"
+            >
+              {/* Header */}
+              <div className="px-8 py-6 bg-violet-deep text-white flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">Edit Your Profile</h3>
+                  <p className="text-xs text-violet-soft mt-0.5">Customize your digital representation</p>
+                </div>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="p-1.5 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-8 max-h-[75vh] overflow-y-auto space-y-6">
+                {updateError && (
+                  <div className="bg-red-50 text-red-500 p-4 rounded-xl text-xs border border-red-100">
+                    {updateError}
+                  </div>
+                )}
+                {updateSuccess && (
+                  <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl text-xs border border-emerald-100">
+                    {updateSuccess}
+                  </div>
+                )}
+
+                <form onSubmit={handleUpdateProfile} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editDisplayName}
+                      onChange={(e) => setEditDisplayName(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-primary/20 focus:border-violet-primary text-sm transition-all"
+                      placeholder="Your Full Name"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Bio Description</label>
+                    <textarea
+                      rows={3}
+                      value={editBio}
+                      onChange={(e) => setEditBio(e.target.value)}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-primary/20 focus:border-violet-primary text-sm transition-all resize-none"
+                      placeholder="Tell the community about yourself..."
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Profile Picture URL</label>
+                    <input
+                      type="url"
+                      value={editPhotoURL}
+                      onChange={(e) => setEditPhotoURL(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-primary/20 focus:border-violet-primary text-sm transition-all"
+                      placeholder="https://example.com/avatar.jpg"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cover Banner URL</label>
+                    <input
+                      type="url"
+                      value={editCoverURL}
+                      onChange={(e) => setEditCoverURL(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-primary/20 focus:border-violet-primary text-sm transition-all"
+                      placeholder="https://example.com/cover.jpg"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="w-full bg-violet-primary hover:bg-violet-deep text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 text-sm shadow-md"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSaving ? 'Saving Changes...' : 'Save Profile Details'}
+                  </button>
+                </form>
+
+                {/* Password / Forgot Section */}
+                <div className="border-t border-slate-100 pt-6 mt-6">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Security & Password</h4>
+                  
+                  {resetEmailSent ? (
+                    <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl text-xs border border-emerald-100 font-medium font-sans">
+                      Password reset instructions have been sent to <span className="font-bold">{profile.email}</span>. Please check your inbox.
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <p className="text-xs text-slate-500 leading-relaxed mb-3">
+                        Want to update or change your password? Request a safe password reset link sent to your registered email address (<span className="font-semibold">{profile.email}</span>).
+                      </p>
+                      {resetEmailError && (
+                        <p className="text-xs text-red-500 font-bold mb-3">{resetEmailError}</p>
+                      )}
+                      <button
+                        onClick={handleSendResetEmail}
+                        disabled={sendingReset}
+                        className="bg-white hover:bg-slate-100 border border-slate-200 text-violet-deep text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition-all disabled:opacity-50"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        {sendingReset ? 'Sending Reset Link...' : 'Request Password Reset Link'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

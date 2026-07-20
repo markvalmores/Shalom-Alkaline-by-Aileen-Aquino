@@ -525,7 +525,7 @@ export default function Shop() {
                     <ShieldCheck className="w-6 h-6 text-tea-green" /> Admin Shipping & Order Control
                   </h3>
                   <p className="text-xs text-violet-soft mt-1">
-                    System portal for aquinoaileen305@gmail.com to fulfill client shipments and verify reference codes.
+                    System portal for {user?.email} to fulfill client shipments and verify reference codes.
                   </p>
                 </div>
 

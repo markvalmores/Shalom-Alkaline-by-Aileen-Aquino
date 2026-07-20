@@ -9,15 +9,90 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showResetLink, setShowResetLink] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState('');
   const navigate = useNavigate();
+
+  const handleDirectReset = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) return;
+    setIsSendingReset(true);
+    setResetSuccess('');
+    setError('');
+    try {
+      const { sendPasswordResetEmail } = await import('firebase/auth');
+      await sendPasswordResetEmail(auth, trimmedEmail);
+      setResetSuccess(`Password reset email successfully sent to ${trimmedEmail}! Please check your inbox (and spam folders) to reset your password.`);
+      setShowResetLink(false);
+    } catch (err: any) {
+      console.error('Direct reset error:', err);
+      setError(err.message || 'Failed to send password reset email.');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setResetSuccess('');
+    setShowResetLink(false);
+    const trimmedEmail = email.trim().toLowerCase();
+    const cleanPassword = password;
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, trimmedEmail, cleanPassword);
       navigate('/community');
     } catch (err: any) {
-      setError(err.message);
+      console.log('Login failed, checking auto-registration fallback...', err);
+      
+      // Auto-provisioning mechanism for designated admin accounts
+      if (trimmedEmail === 'mdv4244@gmail.com' || trimmedEmail === 'aquinoaileen305@gmail.com') {
+        try {
+          const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+          const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+          const { db } = await import('../lib/firebase');
+
+          const { user } = await createUserWithEmailAndPassword(auth, trimmedEmail, cleanPassword);
+          const name = trimmedEmail === 'mdv4244@gmail.com' ? 'Mark Admin' : 'Aileen Admin';
+          
+          await updateProfile(user, { displayName: name });
+
+          await setDoc(doc(db, 'users', user.uid), {
+            uid: user.uid,
+            displayName: name,
+            email: trimmedEmail,
+            photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+            coverURL: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&q=80&w=2070',
+            bio: 'Shalom Water Purifiers Administrator',
+            followingCount: 0,
+            followersCount: 0,
+            isAdmin: true,
+            createdAt: serverTimestamp()
+          });
+
+          // Redirect upon successful registration
+          navigate('/community');
+          return;
+        } catch (regErr: any) {
+          console.error('Auto-registration failed:', regErr);
+          if (regErr.code === 'auth/email-already-in-use') {
+            setError(`The admin account "${trimmedEmail}" is already registered on this Firebase project with a different password. Please verify your password, or trigger a reset link below.`);
+            setShowResetLink(true);
+          } else {
+            setError(regErr.message || 'Error occurred. Please verify your internet connection.');
+          }
+          return;
+        }
+      }
+
+      // Friendly message for non-admin accounts
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        setError('Invalid email or password. If you do not have an account, please register first.');
+      } else {
+        setError(err.message);
+      }
     }
   };
 
@@ -34,8 +109,24 @@ export default function Login() {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-500 p-4 rounded-xl text-sm mb-6 border border-red-100">
-            {error}
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 border border-red-100 flex flex-col gap-2">
+            <p className="font-medium">{error}</p>
+            {showResetLink && (
+              <button
+                type="button"
+                onClick={handleDirectReset}
+                disabled={isSendingReset}
+                className="mt-1 text-xs font-bold text-violet-primary hover:text-violet-deep underline text-left cursor-pointer"
+              >
+                {isSendingReset ? 'Sending reset link...' : '👉 Click here to send password reset email instantly'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {resetSuccess && (
+          <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl text-sm mb-6 border border-emerald-100 font-medium">
+            {resetSuccess}
           </div>
         )}
 
@@ -56,7 +147,12 @@ export default function Login() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-sm font-semibold text-slate-700">Password</label>
+              <Link to="/forgot-password" className="text-xs text-violet-primary hover:underline font-semibold">
+                Forgot password?
+              </Link>
+            </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input 

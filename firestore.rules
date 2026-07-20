@@ -11,6 +11,7 @@ service cloud.firestore {
     function isAdmin() { 
       return isSignedIn() && (
         request.auth.token.email == 'aquinoaileen305@gmail.com' || 
+        request.auth.token.email == 'mdv4244@gmail.com' || 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
       ); 
     }
@@ -37,7 +38,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
       allow create: if isOwner(userId) && isValidUser(incoming()) 
-                      && incoming().isAdmin == (request.auth.token.email == 'aquinoaileen305@gmail.com');
+                      && incoming().isAdmin == (request.auth.token.email == 'aquinoaileen305@gmail.com' || request.auth.token.email == 'mdv4244@gmail.com');
       allow update: if (isOwner(userId) || isAdmin()) 
                       && isValidUser(incoming())
                       && (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'coverURL', 'bio', 'followingCount', 'followersCount']));

@@ -30,7 +30,7 @@ export default function Register() {
         bio: 'New Shalom member',
         followingCount: 0,
         followersCount: 0,
-        isAdmin: email === 'aquinoaileen305@gmail.com',
+        isAdmin: email === 'aquinoaileen305@gmail.com' || email === 'mdv4244@gmail.com',
         createdAt: serverTimestamp()
       });
 

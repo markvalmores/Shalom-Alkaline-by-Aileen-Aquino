@@ -88,6 +88,13 @@ export default function Shop() {
       return;
     }
 
+    // Basic GCash Reference validation: must be 13 digits
+    const gcashRegex = /^\d{13}$/;
+    if (!gcashRegex.test(gcashReference.trim())) {
+      alert('Invalid GCash reference. Please enter exactly 13 digits.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const orderData = {

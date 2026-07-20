@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, updateDoc, doc } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { Chat, Message, User } from '../types';
+import { Chat, Message } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Plus, Users, Hash, Loader2, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Send, Plus, Users, Hash, Loader2, ArrowLeft, MessageCircle, Image as ImageIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
+import React, { useState, useEffect, useRef } from 'react';
 
 export default function Messenger() {
   const { user } = useAuth();
@@ -13,6 +14,8 @@ export default function Messenger() {
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -42,22 +45,35 @@ export default function Messenger() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeChat || !user) return;
+    if ((!newMessage.trim() && !selectedFile) || !activeChat || !user) return;
     
     const msg = newMessage;
     setNewMessage('');
+    const file = selectedFile;
+    setSelectedFile(null);
     
     try {
+      let fileUrl = '';
+      let fileType = '';
+      if (file) {
+        const fileRef = storageRef(storage, `chats/${activeChat.id}/${Date.now()}_${file.name}`);
+        await uploadBytes(fileRef, file);
+        fileUrl = await getDownloadURL(fileRef);
+        fileType = file.type;
+      }
+
       await addDoc(collection(db, 'chats', activeChat.id, 'messages'), {
         chatId: activeChat.id,
         senderId: user.uid,
         senderName: user.displayName,
         text: msg,
+        imageURL: fileUrl || null,
+        fileType: fileType || null,
         createdAt: serverTimestamp()
       });
       
       await updateDoc(doc(db, 'chats', activeChat.id), {
-        lastMessage: msg,
+        lastMessage: msg || 'File sent',
         updatedAt: serverTimestamp()
       });
     } catch (err) {
@@ -154,6 +170,18 @@ export default function Messenger() {
                         ? 'bg-violet-primary text-white rounded-tr-none' 
                         : 'bg-white text-slate-700 border border-tea-green/20 rounded-tl-none'
                     }`}>
+                      {msg.imageURL && (
+                        <div className="mb-2 rounded-lg overflow-hidden border border-slate-100">
+                          {msg.fileType?.startsWith('video/') ? (
+                            <video controls className="w-full max-h-64">
+                              <source src={msg.imageURL} type={msg.fileType} />
+                              Your browser does not support the video tag.
+                            </video>
+                          ) : (
+                            <img src={msg.imageURL} alt="Message media" className="w-full max-h-64" />
+                          )}
+                        </div>
+                      )}
                       {msg.text}
                     </div>
                   </motion.div>
@@ -163,7 +191,27 @@ export default function Messenger() {
             </div>
 
             <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-tea-green/20">
+              {selectedFile && (
+                <div className="mb-2 p-2 bg-slate-100 rounded-lg flex items-center justify-between text-sm text-slate-600">
+                  <span className="truncate">{selectedFile.name}</span>
+                  <button type="button" onClick={() => setSelectedFile(null)} className="p-1 hover:bg-slate-200 rounded-full"><X className="w-4 h-4" /></button>
+                </div>
+              )}
               <div className="flex gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
+                  className="hidden"
+                  accept=".mp4,.avi,.webm,.gif,.png,.jpg,.jpeg,.bmp,.flv,.swf"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 text-slate-400 hover:text-violet-primary hover:bg-violet-50 rounded-full transition-colors"
+                >
+                  <ImageIcon className="w-5 h-5" />
+                </button>
                 <input
                   type="text"
                   value={newMessage}
@@ -173,7 +221,7 @@ export default function Messenger() {
                 />
                 <button 
                   type="submit"
-                  disabled={!newMessage.trim()}
+                  disabled={!newMessage.trim() && !selectedFile}
                   className="p-3 bg-violet-primary text-white rounded-full hover:bg-violet-deep transition-colors disabled:opacity-50"
                 >
                   <Send className="w-5 h-5" />

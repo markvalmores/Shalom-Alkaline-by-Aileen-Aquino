@@ -86,6 +86,19 @@ export const PostItem: React.FC<{ post: Post }> = ({ post }) => {
             {post.content}
           </div>
 
+          {post.imageURL && (
+            <div className="mb-6 rounded-2xl overflow-hidden border border-slate-100">
+              {post.fileType?.startsWith('video/') ? (
+                <video controls className="w-full">
+                  <source src={post.imageURL} type={post.fileType} />
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <img src={post.imageURL} alt="Post media" className="w-full" />
+              )}
+            </div>
+          )}
+
           <div className="flex items-center gap-6 border-t border-slate-50 pt-4">
             <button className="flex items-center gap-2 text-slate-500 hover:text-violet-primary transition-colors text-sm font-medium p-2 hover:bg-violet-50 rounded-lg">
               <MessageSquare className="w-5 h-5" />

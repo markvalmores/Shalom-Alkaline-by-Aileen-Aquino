@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import React, { useState, useEffect, useRef } from 'react';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Post } from '../types';
 import { PostItem } from './PostItem';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Send, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, Send, Loader2, X } from 'lucide-react';
 
 export default function Community() {
   const { user } = useAuth();
@@ -13,6 +14,8 @@ export default function Community() {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -24,21 +27,37 @@ export default function Community() {
     return () => unsubscribe();
   }, []);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || !user) return;
+    if ((!content.trim() && !selectedFile) || !user) return;
     setPosting(true);
     try {
+      let fileUrl = '';
+      if (selectedFile) {
+        const fileRef = storageRef(storage, `posts/${user.uid}/${Date.now()}_${selectedFile.name}`);
+        await uploadBytes(fileRef, selectedFile);
+        fileUrl = await getDownloadURL(fileRef);
+      }
+
       await addDoc(collection(db, 'posts'), {
         authorId: user.uid,
         authorName: user.displayName,
         authorPhoto: user.photoURL,
         content: content.trim(),
+        imageURL: fileUrl || null,
+        fileType: selectedFile?.type || null,
         upvotes: [],
         downvotes: [],
         createdAt: serverTimestamp()
       });
       setContent('');
+      setSelectedFile(null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -59,13 +78,20 @@ export default function Community() {
               placeholder="Saturate the sea with your visions..."
               className="w-full bg-slate-50 border-none rounded-2xl p-4 text-slate-700 focus:ring-2 focus:ring-violet-primary/20 min-h-[120px] resize-none"
             />
+            {selectedFile && (
+              <div className="mt-2 p-2 bg-slate-100 rounded-lg flex items-center justify-between text-sm text-slate-600">
+                <span className="truncate">{selectedFile.name}</span>
+                <button type="button" onClick={() => setSelectedFile(null)} className="p-1 hover:bg-slate-200 rounded-full"><X className="w-4 h-4" /></button>
+              </div>
+            )}
             <div className="flex items-center justify-between mt-4">
-              <button type="button" className="p-2 hover:bg-tea-green/20 rounded-full text-dark-tea transition-colors">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-tea-green/20 rounded-full text-dark-tea transition-colors">
                 <ImageIcon className="w-5 h-5" />
               </button>
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".mp4,.avi,.webm,.gif,.png,.jpg,.jpeg,.bmp,.flv,.swf" />
               <button 
                 type="submit"
-                disabled={posting || !content.trim()}
+                disabled={posting || (!content.trim() && !selectedFile)}
                 className="bg-violet-primary text-white px-6 py-2 rounded-full font-bold flex items-center gap-2 hover:bg-violet-deep transition-colors disabled:opacity-50"
               >
                 {posting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /> Post</>}

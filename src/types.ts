@@ -17,6 +17,7 @@ export interface Post {
   authorPhoto?: string;
   content: string;
   imageURL?: string;
+  fileType?: string;
   upvotes: string[]; // List of user IDs who upvoted
   downvotes: string[]; // List of user IDs who downvoted
   createdAt: any;
@@ -45,6 +46,8 @@ export interface Message {
   senderId: string;
   senderName: string;
   text: string;
+  imageURL?: string;
+  fileType?: string;
   createdAt: any;
 }
 
